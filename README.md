@@ -83,7 +83,7 @@ Inside the codebase of the application, there are specific spaces in which you w
 
 - The original description of the assignment can be found [here](https://sites.google.com/view/computer-networks-ii/%CE%B5%CF%81%CE%B3%CE%B1%CF%83%CE%AF%CE%B5%CF%82)
 - Additional content for the assignement will be uploaded [here](https://sites.google.com/view/computer-networks-ii)
-- Already existing repo [here](https://github.com/glavdakis/CN2_AUTH_ChatAndVoIP)
+- Already existing repo [here](https://github.com/glavdakis/CN2_AUTH_ChatAndVoIP_OLD)
 
 ## 📫 Contact: 
 
