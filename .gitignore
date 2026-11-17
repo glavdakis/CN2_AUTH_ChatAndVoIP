@@ -2,3 +2,16 @@
 .classpath
 .project
 .settings/
+# LaTeX build output
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.run.xml
+report/main.pdf
