@@ -1,93 +1,82 @@
-# P2P Chat and VoIP Application using UDP in Java
+# P2P Chat and VoIP Application
 
-This repository contains the codebase of the **Peer-to-Peer (P2P) Chat and VoIP application** which will be developed as the main assignment for the **Computer Networks II** course. This course is taught as part of the curiculum of the **Electrical and Computer Engineering** department of the **Aristotle University of Thessaloniki (AUTH)** during the **2024-2025** academic year.
+A two-peer desktop application for text chat and voice calls, written in Java with plain UDP and TCP sockets.
 
-## 📚 Project Overview
-
-The purpose of this project is to create a simple Peer-to-Peer (P2P) application that enables real-time chat and Voice over IP (VoIP) communication utilizing the UDP protocol in Java. This application will be based on  `java.net` to handle network communications, providing a foundational understanding of network programming, concurrency, and instant messaging and multimedia dataexchange between two peers.
-
-## 🛠️ Technologies Used
-
-- **Programming Language:** Java
-- **Libraries & Frameworks:**
-  - `java.net` for networking
-  - `javax.sound` for audio capture and playback
-- **Protocols:**
-  - UDP (User Datagram Protocol) for communication
-- **Tools:**
-  - Git for version control
-  - Maven for build automation and project management for Java projects
-
-## ✨ Features
-
-- Instant messaging and voice data exchange using UDP
-- Simplistic Graphic User Interface (GUI) instead of command line implementation
-- Multithreaded architecture to enable concurent instant messaging and VoIP functionalities
-
-## 🛠️ Pre-requisites 
-
-Please consider installing and using the following applications and tools for the assignment:
-
-- Git: [link](https://git-scm.com/downloads)
-- Java 23 (although it is expected to work with any version from 1.8 and beyond): [link](https://www.oracle.com/java/technologies/downloads/)
-- Eclipse IDE for Enterprise Java and Web Developers: [link](https://www.eclipse.org/downloads/packages/)
-- Apache Maven: [link](https://maven.apache.org/download.cgi)
-
-## 🚀 Installation
-
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/siavvasm/CN2_AUTH_ChatAndVoIP.git
-   ```
-
-2. **Import the code into the ECLIPSE IDE:**
-
-- In ECLIPSE IDE select File -> Import
-- In the displayed Window select "Existing Maven Projects" anc click Next
-- Them click on the Browse button and navigate inside the CN2_AUTH_ChatAndVoIP folder and click on the "Select Folder" button
-- Check the checkbox with the "pom.xml" file and click Finish
-- The CN2_AUTH_ChatAndVoIP application must be visible in the Navigation Pane of the ECLISPE IDE
-
-## 📖 Assignment Instructions
-
-Inside the codebase there is a single Java class named "App.java". This will be the central class of the Chat and VoIP application in which the main() method will reside. 
-
-In order to compile and execute the code you need to select the App.java class and click on the Run As option of ECLIPSE IDE and then select the "Run as Java Application" option. This will compile and run the source code. If the compilation is successful the GUI of the application will be displayed on your screen. The GUI is presented below: 
+Team project for the **Computer Networks II** course at ECE AUTH during the 2024–2025 academic year.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/713e81b5-f7bc-44ec-8d6c-56fa77288c2d" alt="cn2-cnv-1">
+  <img src="docs/app.png" alt="Chat window" width="480">
 </p>
 
-As can be seen by the figure above, the application contains a Text Field that is used for writing the messages that need to be sent to the other peer, a Text Area for displaying the messages that have been sent or received, and two buttons. The "Send" button is responsible for sending the messages that are typed into the Text Field. The "Call" button is responsible for initiating a VoIP call with the remote peer (i.e., for starting listening for voice packets and sending voice packets captured from the computer's microphone).
+## Branches
 
-As part of the assignment, you will need to implement the functionalities of the "Send" and "Call" buttons (as at the moment they are doing nothing). 
+| Branch | What it contains |
+|---|---|
+| [`master`](../../tree/master) | The full version described in the report: chat, voice calls and AES-GCM encryption of text messages. |
+| [`no-encryption`](../../tree/no-encryption) | The same chat and voice calls without encryption. Simpler, and more robust (see [Known limitations](#known-limitations)). |
 
-Inside the codebase of the application, there are specific spaces in which you will need to complete by writing the appropriate source code.  These are designated with the **//TODO:** comment tag. For example, you should search for parts of the following form: 
+## Features
+
+- **Text chat over UDP:** each peer sends and receives datagrams on port 1234.
+- **Voice calls over UDP:** audio is captured at 8 kHz, 8-bit, mono and streamed in 1024-byte datagrams on port 1243. Capture and playback run on separate threads, so chat and voice work at the same time.
+- **Text chat over TCP:** an alternative client/server version of the chat on port 2345.
+- **Encryption** (`master` only): UDP text messages are encrypted with AES-GCM. Both peers derive the same 128-bit key from a shared password (PBKDF2 with HMAC-SHA256), set with the *Set Pass* button.
+- **Long messages** (`master` only): messages of up to 50,000 characters are split into 500-character chunks and reassembled by the receiver.
+
+Only the Java standard library is used (`java.net`, `javax.sound`, `javax.crypto`, Swing).
+
+## Traffic analysis
+
+The exchanged packets were captured and analyzed in Wireshark: UDP and TCP text packets, the voice stream and individual voice packets. The capture below shows six chat datagrams between two machines on the same network.
+
+![UDP chat packets in Wireshark](docs/wireshark-udp.png)
+
+The full analysis is in the report (in Greek): [`Documentation-Report.pdf`](Documentation-Report.pdf).
+
+## Running it
+
+Requirements: Java 8 or later and Maven.
+
+1. Set the address of the other peer in `App.java` (`remoteAddress`; the default is `localhost`).
+2. Build and start the application on both machines:
+
+   ```bash
+   mvn compile exec:java -Dexec.mainClass=com.cn2.communication.App
+   ```
+
+   You can also import the project into an IDE as a Maven project and run `App.java`.
+3. On `master`: type the same password (at least 6 characters) on both sides and press *Set Pass*.
+4. Press *Send* to send a message, or *Call* to start and stop a voice call.
+
+The firewall must allow UDP traffic on ports 1234 and 1243. To use the TCP chat, enable the `TCPChatServer` and `TCPChatClient` lines in `App.java` on the two peers.
+
+## Known limitations
+
+The encryption on `master` is a proof of concept. After every message the sender switches to a new IV and sends it inside that message, so both peers must receive every message, in order. Because UDP does not guarantee delivery:
+
+- If a single chat packet is lost, every later message fails to decrypt.
+- If both peers press *Send* at the same moment, both messages fail, and so does the rest of the conversation.
+- The encrypted version cannot be tested with one instance on a single machine (`localhost`), because the app decrypts its own message with the IV it has already moved past.
+
+Restarting both applications puts them back in sync. The chunks of a long message also share one IV, which AES-GCM is not meant to allow. The `no-encryption` branch has none of these issues.
+
+## Project structure
 
 ```
-// TODO: Your code goes here...
-// TODO: Please define and initialize your variables here...
+src/main/java/com/cn2/communication/
+  App.java             GUI and application logic
+  UDPChat.java         text chat over UDP
+  TCPChatClient.java   text chat over TCP (client side)
+  TCPChatServer.java   text chat over TCP (server side)
+  VoIP.java            voice streaming over UDP
+  AudioRecord.java     microphone capture
+  AudioPlayback.java   speaker playback
+  AESci.java           AES-GCM encryption (master only)
 ```
 
-- **This README file will be updated with additional instructions and hints in the upcoming days...**
+## Team
 
-## ⚠️ **ATTENTION:**
->- You must use the UDP protocol both for the Chat and for the VoIP implementations.
->- You must utilize the native libraries that are provided by Java (`java.net`  and `javax.sound` *).
->- You cannot use any external dependency for this assignment.
->- **Firewall and Network Configuration:** Ensure that your firewall settings allow UDP traffic on the specified ports. Incorrect configurations may prevent peers from connecting.
->- **Java Version:** This application requires Java **1.8** or higher. Ensure that your `JAVA_HOME` environment variable is correctly set to the installed Java version.
->- **Audio Hardware:** Proper functioning of VoIP features depends on the availability and correct configuration of audio input/output devices (e.g., microphone and speakers).
+- **Georgios Lavdakis:** UDP and TCP chat, voice streaming, Wireshark analysis
+- **TEAMMATE NAME:** encryption
 
-## 📄 Useful Material
-
-- The original description of the assignment can be found [here](https://sites.google.com/view/computer-networks-ii/%CE%B5%CF%81%CE%B3%CE%B1%CF%83%CE%AF%CE%B5%CF%82)
-- Additional content for the assignement will be uploaded [here](https://sites.google.com/view/computer-networks-ii)
-
-## 📫 Contact: 
-
-For any questions, suggestions, or contributions, feel free to reach out:
-
-- Email: msiavva@ece.auth.gr, siavvasm@gmail.com
-
- 
+The starting GUI template was provided by the course instructor, [Miltiadis Siavvas](https://github.com/siavvasm/CN2_AUTH_ChatAndVoIP).
