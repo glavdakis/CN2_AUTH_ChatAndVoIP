@@ -5,7 +5,7 @@ A two-peer desktop application for text chat and voice calls, written in Java wi
 Team project for the **Computer Networks II** course at ECE AUTH during the 2024–2025 academic year.
 
 <p align="center">
-  <img src="docs/app.png" alt="Chat window" width="480">
+  <img src="report/images/gui/app-chat.png" alt="Chat window" width="480">
 </p>
 
 ## Branches
@@ -29,9 +29,9 @@ Only the Java standard library is used (`java.net`, `javax.sound`, `javax.crypto
 
 The exchanged packets were captured and analyzed in Wireshark: UDP and TCP text packets, the voice stream and individual voice packets. The capture below shows six chat datagrams between two machines on the same network.
 
-![UDP chat packets in Wireshark](docs/wireshark-udp.png)
+![UDP chat packets in Wireshark](report/images/udp-chat/udpchat_6.png)
 
-The full analysis is in the report (in Greek): [`Documentation-Report.pdf`](Documentation-Report.pdf). It describes the code on `master`. Its LaTeX source is in [`report/`](report); to rebuild it, run `latexmk -pdf main.tex` inside that folder.
+The full analysis is in the report (in Greek): [`report/Documentation-Report.pdf`](report/Documentation-Report.pdf). It describes the code on `master`. To rebuild it from its LaTeX source, run `latexmk -pdf Documentation-Report.tex` inside `report/`.
 
 ## Running it
 
@@ -74,14 +74,18 @@ src/main/java/com/cn2/communication/
   AudioPlayback.java   speaker playback
   AESci.java           AES-GCM encryption (master only)
 report/
-  main.tex             LaTeX source of the report
-  images/              GUI screenshot and Wireshark captures used in the report
-docs/                  images used in this README
+  Documentation-Report.tex   LaTeX source of the report (in Greek)
+  Documentation-Report.pdf   the report
+  images/                    screenshots used in the report and this README
+    gui/                     the application window
+    udp-chat/                Wireshark captures of the UDP chat
+    tcp-chat/                Wireshark captures of the TCP chat
+    voip/                    Wireshark captures of the voice calls
 ```
 
 ## Team
 
-- **Georgios Lavdakis:** UDP and TCP chat, voice streaming, Wireshark analysis
-- **Georgios Vavouras:** encryption
+- **Georgios Lavdakis** 
+- **Georgios Vavouras**
 
 The starting GUI template was provided by the course instructor, [Miltiadis Siavvas](https://github.com/siavvasm/CN2_AUTH_ChatAndVoIP).
