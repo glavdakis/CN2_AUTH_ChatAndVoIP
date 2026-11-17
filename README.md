@@ -57,6 +57,7 @@ The encryption on `master` is a proof of concept. After every message the sender
 - If a single chat packet is lost, every later message fails to decrypt.
 - If both peers press *Send* at the same moment, both messages fail, and so does the rest of the conversation.
 - The encrypted version cannot be tested with one instance on a single machine (`localhost`), because the app decrypts its own message with the IV it has already moved past.
+- The receiver reads at most 1024 bytes per packet. Greek characters take two bytes each, so a Greek message (or chunk) longer than 368 characters is cut off and cannot be decrypted. English text fits up to the 500-character chunk size.
 
 Restarting both applications puts them back in sync. The chunks of a long message also share one IV, which AES-GCM is not meant to allow. The `no-encryption` branch has none of these issues.
 

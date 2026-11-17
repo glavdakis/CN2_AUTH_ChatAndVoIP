@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-//import java.nio.charset.StandardCharsets;	//for utf test
-//import java.util.Arrays;	//for slicing buffer
 
 import javax.sound.sampled.LineUnavailableException;
 import javax.swing.JTextArea;
@@ -30,10 +28,6 @@ public class UDPChat { // class for chat using UDP
 				 send packets of length of buffer, to IP inetAddress and port=1234 of remote */  
 		 		 datagramSocket.send(datagramPacket); // send datagramPacket
 		 		 
-//		 		 System.err.println(messageToRemote.length()); 			// debug, prints char length of messageToRemote on the console
-//		 		 System.err.println(messageToRemote.getBytes().length); // debug, prints byte length of messageToRemote on the console
-//		 		 System.err.println(sendBuffer.length); 				// debug, prints byte length of sendBuffer on the console
-//		 		 System.err.println(datagramPacket.getLength()); 		// debug, prints byte length of datagramPacket on the console
 		 	 }
 		 	 catch (IOException e) { // in case of error
 		 		 e.printStackTrace();
@@ -52,17 +46,13 @@ public class UDPChat { // class for chat using UDP
      	 	 		 String messageFromRemote = new String(datagramPacket.getData(), 0, datagramPacket.getLength()); 
      	 	 		 // creates string from datagramPacket byte array by remote, offset=0
      	 	 		
-//     	 	 		 aesci.exportKeys(); // debug, prints key and IV used to decrypt message
-//     	 	 		 System.err.println(datagramPacket.getLength()); // debug, prints byte length of datagramPacket on the console
      	 	 		 messageFromRemote = aesci.decryptMessage(messageFromRemote);
-//     	 	 		 aesci.exportKeys(); // debug, prints key and IV used after decrypting message
      	 	 		 textArea.append("remote: " + messageFromRemote + "\n"); // appear messageFromRemote to textArea and change line
 	 	 	 	 }
 	     	 	 catch (IOException e) { // in case of error
 	     	 		 e.printStackTrace();
 	     	 	 } 
 	 	 	 	 catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}	//maybe unecessary
 	 	 	 }
