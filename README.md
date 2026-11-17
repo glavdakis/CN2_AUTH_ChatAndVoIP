@@ -31,7 +31,7 @@ The exchanged packets were captured and analyzed in Wireshark: UDP and TCP text 
 
 ![UDP chat packets in Wireshark](docs/wireshark-udp.png)
 
-The full analysis is in the report (in Greek): [`Documentation-Report.pdf`](Documentation-Report.pdf).
+The full analysis is in the report (in Greek): [`Documentation-Report.pdf`](Documentation-Report.pdf). It describes the code on `master`. Its LaTeX source is in [`report/`](report); to rebuild it, run `latexmk -pdf main.tex` inside that folder.
 
 ## Running it
 
@@ -73,11 +73,15 @@ src/main/java/com/cn2/communication/
   AudioRecord.java     microphone capture
   AudioPlayback.java   speaker playback
   AESci.java           AES-GCM encryption (master only)
+report/
+  main.tex             LaTeX source of the report
+  images/              GUI screenshot and Wireshark captures used in the report
+docs/                  images used in this README
 ```
 
 ## Team
 
 - **Georgios Lavdakis:** UDP and TCP chat, voice streaming, Wireshark analysis
-- **TEAMMATE NAME:** encryption
+- **Georgios Vavouras:** encryption
 
 The starting GUI template was provided by the course instructor, [Miltiadis Siavvas](https://github.com/siavvasm/CN2_AUTH_ChatAndVoIP).
