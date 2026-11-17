@@ -31,7 +31,7 @@ The exchanged packets were captured and analyzed in Wireshark: UDP and TCP text 
 
 ![UDP chat packets in Wireshark](report/images/udp-chat/udpchat_6.png)
 
-The full analysis is in the report (in Greek): [`report/Documentation-Report.pdf`](report/Documentation-Report.pdf). It describes the code on `master`. To rebuild it from its LaTeX source, run `latexmk -pdf Documentation-Report.tex` inside `report/`.
+The full analysis is in the report (in Greek): [`report/Documentation-Report.pdf`](report/Documentation-Report.pdf). It describes the code on `master`.
 
 ## Running it
 
@@ -59,7 +59,7 @@ The encryption on `master` is a proof of concept. After every message the sender
 - The encrypted version cannot be tested with one instance on a single machine (`localhost`), because the app decrypts its own message with the IV it has already moved past.
 - The receiver reads at most 1024 bytes per packet. Greek characters take two bytes each, so a Greek message (or chunk) longer than 368 characters is cut off and cannot be decrypted. English text fits up to the 500-character chunk size.
 
-Restarting both applications puts them back in sync. The chunks of a long message also share one IV, which AES-GCM is not meant to allow. The `no-encryption` branch has none of these issues.
+Restarting both applications puts them back in sync. The chunks of a long message also share one IV, which AES-GCM is not meant to allow. The `no-encryption` branch does not lose sync: a lost or cut-off message affects only that message.
 
 ## Project structure
 
@@ -74,8 +74,7 @@ src/main/java/com/cn2/communication/
   AudioPlayback.java   speaker playback
   AESci.java           AES-GCM encryption (master only)
 report/
-  Documentation-Report.tex   LaTeX source of the report (in Greek)
-  Documentation-Report.pdf   the report
+  Documentation-Report.pdf   the report (in Greek)
   images/                    screenshots used in the report and this README
     gui/                     the application window
     udp-chat/                Wireshark captures of the UDP chat
