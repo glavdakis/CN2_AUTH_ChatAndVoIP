@@ -8,54 +8,47 @@ import java.net.InetAddress;
 import javax.sound.sampled.LineUnavailableException;
 import javax.swing.JTextArea;
 
-public class UDPChat { // class for chat using UDP
-	
-	 private InetAddress remoteAddress; // define IP address remoteAddress, to set it as IP of remote 
-	 private DatagramSocket datagramSocket; // define DatagramSocket datagramSocket 
-	 private byte[] sendBuffer = new byte[1024]; // define buffer to store messages, size = 1024 byte    
+public class UDPChat { // text chat over UDP, port 1234
+
+	 private InetAddress remoteAddress;
+	 private DatagramSocket datagramSocket;
+	 private byte[] sendBuffer = new byte[1024];
 	 private byte[] receiveBuffer = new byte[1024];
+
 	 public UDPChat(DatagramSocket datagramSocket, InetAddress remoteAddress) throws LineUnavailableException {
-	 // conctructor UDPChat, initialize datagramSocket, remoteAddress 
-		 
 		 this.remoteAddress  = remoteAddress;
-	     this.datagramSocket = datagramSocket;     
+	     this.datagramSocket = datagramSocket;
 	 }
-	 
-	 public void send(String messageToRemote) throws LineUnavailableException { // method send, local sends text messageToRemote
+
+	 public void send(String messageToRemote) throws LineUnavailableException {
 		 	 try {
-		 		 sendBuffer = messageToRemote.getBytes(); // convert messageToRemote to bytes and put to buffer
-		 		 DatagramPacket datagramPacket = new DatagramPacket(sendBuffer, sendBuffer.length, remoteAddress, 1234); /* construct datagramPacket,  
-				 send packets of length of buffer, to IP inetAddress and port=1234 of remote */  
-		 		 datagramSocket.send(datagramPacket); // send datagramPacket
-		 		 
+		 		 sendBuffer = messageToRemote.getBytes();
+		 		 DatagramPacket datagramPacket = new DatagramPacket(sendBuffer, sendBuffer.length, remoteAddress, 1234);
+		 		 datagramSocket.send(datagramPacket);
 		 	 }
-		 	 catch (IOException e) { // in case of error
+		 	 catch (IOException e) {
 		 		 e.printStackTrace();
 		 	 }
-	 
 	 }
-	 
-	 public void receive(JTextArea textArea, AESci aesci) throws LineUnavailableException { // method receive, local receives text messageFromRemote
-	 	 
-	 	 new Thread(() -> { // Thread the receive text process
-	 	 	 while (true) { // local always waiting to receive data, infinite loop
+
+	 // Receives messages on a separate thread, so the GUI keeps working
+	 public void receive(JTextArea textArea, AESci aesci) throws LineUnavailableException {
+	 	 new Thread(() -> {
+	 	 	 while (true) {
 	 	 	 	 try {
-	 	 	 		 DatagramPacket datagramPacket = new DatagramPacket(receiveBuffer, receiveBuffer.length); /* construct datagramPacket,
-     	 	 		 receive packets of length of buffer */ 
-     	 	 		 datagramSocket.receive(datagramPacket); // datagramPacket received from datagramSocket, blocking method  
-     	 	 		 String messageFromRemote = new String(datagramPacket.getData(), 0, datagramPacket.getLength()); 
-     	 	 		 // creates string from datagramPacket byte array by remote, offset=0
-     	 	 		
-     	 	 		 messageFromRemote = aesci.decryptMessage(messageFromRemote);
-     	 	 		 textArea.append("remote: " + messageFromRemote + "\n"); // appear messageFromRemote to textArea and change line
+	 	 	 		 DatagramPacket datagramPacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+	 	 	 		 datagramSocket.receive(datagramPacket); // blocks until a packet arrives
+	 	 	 		 String messageFromRemote = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
+	 	 	 		 messageFromRemote = aesci.decryptMessage(messageFromRemote);
+	 	 	 		 textArea.append("remote: " + messageFromRemote + "\n");
 	 	 	 	 }
-	     	 	 catch (IOException e) { // in case of error
-	     	 		 e.printStackTrace();
-	     	 	 } 
+	 	 	 	 catch (IOException e) {
+	 	 	 		 e.printStackTrace();
+	 	 	 	 }
 	 	 	 	 catch (Exception e) {
-					e.printStackTrace();
-				}	//maybe unecessary
+	 	 	 		 e.printStackTrace();
+	 	 	 	 }
 	 	 	 }
-	 	 }).start(); // start Thread
+	 	 }).start();
 	 }
 }

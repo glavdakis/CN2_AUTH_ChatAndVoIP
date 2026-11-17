@@ -9,84 +9,77 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import javax.swing.JTextArea;
 
-public class TCPChatServer { // class for the user "server" that accepts the socket connection request
-	
-	private ServerSocket serverSocket; // define serverSocket, waits for requests for connection on a port and creates Socket object
-	private Socket socket; // define socket
-	private BufferedReader bufferedReader; // define buffer bufferedReader, contains data sent from remote   
-	private BufferedWriter bufferedWriter; // define buffer bufferedWriter, contains data local will send to remote  
-	
-	public TCPChatServer(ServerSocket serverSocket) { // conctructor TCPChatReceiver, initialize serverSocket and accept socket connection request 
-		
+public class TCPChatServer { // TCP chat for the peer that accepts the connection
+
+	private ServerSocket serverSocket;
+	private Socket socket;
+	private BufferedReader bufferedReader;
+	private BufferedWriter bufferedWriter;
+
+	public TCPChatServer(ServerSocket serverSocket) {
 		try {
 			this.serverSocket = serverSocket;
-            this.socket = serverSocket.accept(); // accept serverSocket 
-            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream())); /* put InputStreamReader to bufferedReader, 
-            InputStreamReader converts the input byte stream coming from socket to character stream */
-            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())); /* put OutputStreamWriter to bufferedWriter, 
-            OutputStreamWriter converts the output character stream sent to socket to byte stream */
+            this.socket = serverSocket.accept(); // waits for the other peer to connect
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 		}
-		catch (IOException e) { // in case of error
+		catch (IOException e) {
             e.printStackTrace();
             System.out.println("Error initializing");
-            closeEverything(); // close streams
+            closeEverything();
         }
 	}
-	
-    public void send(String messageToRemote) { // method send, local sends text messageToRemote 
-    	
+
+    public void send(String messageToRemote) {
     	try {
-			bufferedWriter.write(messageToRemote); // messageToRemote to bufferedWriter 
-			bufferedWriter.newLine(); // used to create line separator "\n" in buffer so we know when the messageToRemote is finished 
-			bufferedWriter.flush(); // flush the stream when messageToRemote is finished
+			bufferedWriter.write(messageToRemote);
+			bufferedWriter.newLine(); // the receiver reads one line per message
+			bufferedWriter.flush();
 		}
-		catch (IOException e) { // in case of error
+		catch (IOException e) {
 			e.printStackTrace();
-			closeEverything(); // close streams
+			closeEverything();
 		}
 	}
-	
-	public void receive(JTextArea textArea) { // method receive, local receives text messageFromRemote 
-		
-		new Thread(() -> { // Thread the receive text process
-			while (socket.isConnected()) { // while socket connection is established
-				try {
-					String messageFromRemote = bufferedReader.readLine(); // messageFromRemote the message remote sends to local
 
-					if (messageFromRemote == null) { // check for null, remote closed the app
-	                    textArea.append("remote: Disconnected." + "\n"); // inform local
-	                    break; // break from loop 
+	public void receive(JTextArea textArea) {
+		new Thread(() -> {
+			while (socket.isConnected()) {
+				try {
+					String messageFromRemote = bufferedReader.readLine();
+
+					if (messageFromRemote == null) { // the remote closed the app
+	                    textArea.append("remote: Disconnected." + "\n");
+	                    break;
 	                }
-					textArea.append("remote: " + messageFromRemote + "\n"); // appear messageFromRemote to textArea and change line
+					textArea.append("remote: " + messageFromRemote + "\n");
 				}
-				catch (IOException e) { // in case of error
+				catch (IOException e) {
 					e.printStackTrace();
-					closeEverything(); // close streams
-					break; // break from loop 
+					closeEverything();
+					break;
 				}
 			}
-	    }).start(); // start Thread  	
+	    }).start();
     }
-	
-	public void closeEverything() { // checking for null before closing streams to avoid a null pointer exception and closing streams
-		
+
+	public void closeEverything() {
 		try {
-			if (socket != null && !socket.isClosed()) { 				
-				socket.close(); // close socket 
+			if (socket != null && !socket.isClosed()) {
+				socket.close();
 			}
-			if (serverSocket != null && !serverSocket.isClosed()) { 				
-				serverSocket.close(); // close serverSocket 
+			if (serverSocket != null && !serverSocket.isClosed()) {
+				serverSocket.close();
 			}
 			if (bufferedReader != null) {
-				bufferedReader.close(); // close bufferedReader
-			}	
+				bufferedReader.close();
+			}
 		    if (bufferedWriter != null) {
-				bufferedWriter.close(); // close bufferedWriter
-		    }	
+				bufferedWriter.close();
+		    }
 		 }
-		 catch (IOException e) { // in case of error 
+		 catch (IOException e) {
 			 e.printStackTrace();
 		 }
-	}	
-	
+	}
 }

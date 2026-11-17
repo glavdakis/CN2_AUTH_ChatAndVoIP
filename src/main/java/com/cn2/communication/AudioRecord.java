@@ -6,47 +6,36 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
 import javax.sound.sampled.LineUnavailableException;
 
-public class AudioRecord { // class for recording sound
-	
-	private final TargetDataLine targetLine; // define targetLine for capturing audio 
-    private final AudioFormat audioFormat; // define audio format 
-    private final DataLine.Info dataInfo; // define info for the audio. 
-    private byte[] buffer = new byte[1024]; // define buffer to store stream in 
-    
-    public AudioRecord() throws LineUnavailableException { // constructor AudioCapture, initialize variables
-    
-    	this.audioFormat = new AudioFormat(8000, 8, 1, true, false); /* audio format:sampleRate=8000 samples/sec,
-	    sampleSize=8 bits,  1 channel, signed (true) PCM, littleEndian (false) */
-        this.dataInfo = new DataLine.Info(TargetDataLine.class, audioFormat); /* object dataInfo, contains information
-		on what type of audio format targetLine must have */
+public class AudioRecord { // captures audio from the microphone
 
-        if (!AudioSystem.isLineSupported(dataInfo)) { // check if audio is supported 
+	private final TargetDataLine targetLine;
+    private final AudioFormat audioFormat;
+    private final DataLine.Info dataInfo;
+    private byte[] buffer = new byte[1024];
+
+    public AudioRecord() throws LineUnavailableException {
+    	this.audioFormat = new AudioFormat(8000, 8, 1, true, false); // 8 kHz, 8-bit, mono, signed PCM, little-endian
+        this.dataInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
+
+        if (!AudioSystem.isLineSupported(dataInfo)) {
              System.out.println("Not supported");
         }
-         
-        this.targetLine = (TargetDataLine) AudioSystem.getLine(dataInfo); // get targetLine 
+
+        this.targetLine = (TargetDataLine) AudioSystem.getLine(dataInfo);
     }
 
-    public void open() throws LineUnavailableException {   
-    	
-        this.targetLine.open(audioFormat); // open targetLine 
-        this.targetLine.start(); // microphone open, targetLine starts capturing data from microphone 
+    public void open() throws LineUnavailableException {
+        this.targetLine.open(audioFormat);
+        this.targetLine.start();
     }
-    
-    public byte[] read() { 
-    	
-    	targetLine.read(buffer, 0, buffer.length); // read the recorded audio data from targetLine into buffer, offset=0 for real time usage 
-        return buffer; // return bytes of data from buffer  
-	}
-	
-	public void close() {  
-		
-		targetLine.stop(); // stop the targetLine but retains its resources 
-		targetLine.close(); // close the targetLine and releases resources 
-	}
-    
-}    
 
-    
-    
+    public byte[] read() {
+    	targetLine.read(buffer, 0, buffer.length);
+        return buffer;
+	}
 
+	public void close() {
+		targetLine.stop();
+		targetLine.close();
+	}
+}

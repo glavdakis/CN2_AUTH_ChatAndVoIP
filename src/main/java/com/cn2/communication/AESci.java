@@ -2,164 +2,145 @@ package com.cn2.communication;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;	//for generating key with password
+import javax.crypto.SecretKeyFactory;
 
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.spec.PBEKeySpec;
 
-import java.security.NoSuchAlgorithmException;	//for generating key with password
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;	//for generating key with password
+import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Base64;
 
 // AES + *ci*pher -> AESci: encrypts and decrypts the UDP chat messages with AES-GCM
+//
+// Every message carries the IV of the next one: the sender generates a new IV, puts it (base64, 16 chars)
+// in front of the message, encrypts both with the current IV and then switches to the new IV.
+// The receiver decrypts with the current IV and switches to the IV it finds in the message.
 public class AESci {
-    private SecretKey key;				// the AES key
-    private final int T_LEN = 128;		// the length of the tag used in the Galois/Counter Mode (GCM) of operation in the AES encryption algorithm
-    									// In GCM, a tag is appended to the ciphertext during encryption, and it is used during decryption to verify the integrity of the ciphertext
-    private byte[] IV = new byte[12];	// Initialization Vector: This is the IV (the real IV) our cipher uses, we will call it IV
-    									// it is essentially the ephemeral key that changes after every encryption
-    private String salt = "potato";		// the salt used to generate the key from our password
-    private String ivstr = "";			// the base64 encoded string containing the new IV, before it is assigned to IV
-    public String[] bufferedMes = new String[100];	// the buffer to contain messages over 500chars in plaintext
-    												// Should hold 100 strings max of 500 chars max (50k chars max total)
+    private SecretKey key;
+    private final int T_LEN = 128;		// length of the GCM authentication tag, in bits
+    private byte[] IV = new byte[12];	// the IV currently in use
+    private String salt = "potato";
+    private String ivstr = "";			// base64 of the next IV, before it replaces IV
+    public String[] bufferedMes = new String[100];	// chunks of a long message: 100 chunks of 500 chars max (50k chars)
 
-    // constructor
     public AESci() throws Exception {
-    	initFromPassword("VerySecurePassword");	// Sets the default key
-    	Arrays.fill(IV, (byte) 1);				// Both peers start from the same IV
+    	initFromPassword("VerySecurePassword");	// default key, until Set Pass is used
+    	Arrays.fill(IV, (byte) 1);				// both peers must start from the same IV
     	ivstr = encode(IV);
     }
 
-    // Generates key from password
+    // Derives the AES key from a password (PBKDF2 with HMAC-SHA256)
     public void initFromPassword(String password) throws NoSuchAlgorithmException, InvalidKeySpecException {
-    	// Creates a SecretKeyFactory instance for the PBKDF2WithHmacSHA256 algorithm
     	SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-    	// Create a PBEKeySpec object with the password, salt, iteration count, and key size
-    	// Password is converted to char array, while salt to byte array
-    	// Salt and iteration counts help prevent dictionary attacks and brute force attacks
     	PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(), 65536, 128);
-    	// Creates a SecretKeySpec object (our key) with the generated PBEKeySpec object and the AES algorithm
     	key = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
     }
 
-    // Generates new and random IV (should be called after every encryption, it should be ephemeral)
-    // The new IV should be supplied in the beginning of the sent encrypted message, *before* be put in use
-    // The receiver should decrypt the message with the old IV, extract the new IV from the message and use that for the next message
-    // The base64 IV we generate is 16 chars (should be the first 16 chars of a normal encrypted message)
+    // Generates a random IV for the next message and keeps it in ivstr (it is not used until setIV)
     public void IVgen() {
-    	SecureRandom random = new SecureRandom();	// Creates the random seed
-    	byte[] iv2 = new byte[12];	// Creates a temporary 12-byte array (iv2)
-    	random.nextBytes(iv2);		// Fills the temporary iv2 array with 12 random bytes
-    	ivstr = encode(iv2); 		// Encodes the iv as a base64 string and assigns it to ivstr variable
+    	SecureRandom random = new SecureRandom();
+    	byte[] iv2 = new byte[12];
+    	random.nextBytes(iv2);
+    	ivstr = encode(iv2);
     }
 
-    // Sets the IV from a base64 string
     public void setIV(String IVnew) {
-    	if (!IVnew.isEmpty()) { // Checks if the string is empty
-    		this.IV = decode(IVnew);	// Decodes the base64 string to a byte array and assigns it to IV
+    	if (!IVnew.isEmpty()) {
+    		this.IV = decode(IVnew);
     	}
     }
 
-    // Encrypts text
     public String encrypt(String message) throws Exception {
-    	byte[] messageInBytes = message.getBytes(); // Encodes and assigns string message to a byte array to be encrypted
-        Cipher encryptionCipher = Cipher.getInstance("AES/GCM/NoPadding"); // Creates a new AES/GCM/NoPadding Cipher object
-        GCMParameterSpec spec = new GCMParameterSpec(T_LEN, IV); // Creates a GCMParameterSpec object with the given tag length (T_LEN) and IV
-        encryptionCipher.init(Cipher.ENCRYPT_MODE, key, spec); // Initialize the cipher in *encryption* mode with the AES key and the GCMParameterSpec
-        byte[] encryptedBytes = encryptionCipher.doFinal(messageInBytes); // Encrypts the message using the cipher
-        return encode(encryptedBytes); // Returns a base64 encoded string of the message
+    	byte[] messageInBytes = message.getBytes();
+        Cipher encryptionCipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec spec = new GCMParameterSpec(T_LEN, IV);
+        encryptionCipher.init(Cipher.ENCRYPT_MODE, key, spec);
+        byte[] encryptedBytes = encryptionCipher.doFinal(messageInBytes);
+        return encode(encryptedBytes);
     }
 
-    // Decrypts text
     public String decrypt(String encryptedMessage) throws Exception {
-        byte[] messageInBytes = decode(encryptedMessage); // Decodes and assigns base64 string message to a byte array to be decrypted
-        Cipher decryptionCipher = Cipher.getInstance("AES/GCM/NoPadding"); // Creates a new AES/GCM/NoPadding cipher object for decryption
-        GCMParameterSpec spec = new GCMParameterSpec(T_LEN, IV); // Creates a GCMParameterSpec object with the same tag length and IV used for encryption
-        decryptionCipher.init(Cipher.DECRYPT_MODE, key, spec); // Initializes the cipher in decryption mode with the AES key and the GCMParameterSpec object
-        byte[] decryptedBytes = decryptionCipher.doFinal(messageInBytes); // Decrypts the message using the cipher
-        return new String(decryptedBytes); // Returns decrypted string of the message
+        byte[] messageInBytes = decode(encryptedMessage);
+        Cipher decryptionCipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec spec = new GCMParameterSpec(T_LEN, IV);
+        decryptionCipher.init(Cipher.DECRYPT_MODE, key, spec);
+        byte[] decryptedBytes = decryptionCipher.doFinal(messageInBytes);
+        return new String(decryptedBytes);
     }
 
-    // Converts byte array to Base64 string (to be readable and printed)
     private String encode(byte[] data) {
         return Base64.getEncoder().encodeToString(data);
     }
 
-    // Converts Base64 string to byte array (to be used in cipher mainly)
     private byte[] decode(String data) {
         return Base64.getDecoder().decode(data);
     }
 
-    // Encrypts the message when we press the send button
     // i == 0: keeps the current IV (used for the chunks of a long message)
-    // i == 1: generates a new IV, prepends it to the message and switches to it after encrypting
+    // i == 1: generates a new IV, sends it with the message and switches to it
     public String encryptMessage(String plainMessage, int i) throws Exception {
-    	String encryptedMessage = ""; // The string where the encrypted message will be stored
+    	String encryptedMessage = "";
 
-    	if (i == 0) { // Does not create new IV, uses the old (until all chunks are sent)
-    		encryptedMessage = encrypt(ivstr + plainMessage); // Encrypts the message **without** a new IV in front
+    	if (i == 0) {
+    		encryptedMessage = encrypt(ivstr + plainMessage);
     	}
-    	else if (i == 1) { // Generates a new IV
-    		IVgen(); // Generates new IV to add in the message before sending it (saved in ivstr)
-        	encryptedMessage = encrypt(ivstr + plainMessage); // Encrypts the message after prepending the new IV
-        	setIV(ivstr); // Sets the new IV which was previously generated //ONLY WORKS FOR SEPARATE DEVICES
+    	else if (i == 1) {
+    		IVgen();
+        	encryptedMessage = encrypt(ivstr + plainMessage);
+        	setIV(ivstr); // only works between two devices: on one machine the app would receive its own message
     	}
-    	return encryptedMessage; // Returns encrypted message to the caller (to be sent)
+    	return encryptedMessage;
     }
 
-    // Decrypts the message when we receive one (it is called by the UDPChat receive method)
+    // Returns the text to show for a received message.
+    // "[Voice-Call]" commands arrive unencrypted and are returned as they are.
+    // "[Part]00..." chunks are stored, and "[Part]FINISHED" returns the assembled long message.
     public String decryptMessage(String encryptedMessage) throws Exception {
-    	// We send some commands in plain text:
-    	// "[Voice-Call]" is for Voice-call related commands and comes **un**encrypted
-    	// "[Part]" is for messages that come in multiple chunks and comes **en**crypted
-    	if (!encryptedMessage.substring(0, 12).equals("[Voice-Call]")) { // No need for out of bounds check, the IV is 16 (>12) chars already
-    		encryptedMessage = decrypt(encryptedMessage); // Decrypts encryptedMessage
-    		ivstr = encryptedMessage.substring(0, 16);	// The first 16 chars are the new IV which remote uses by now
-    		setIV(ivstr);  // Sets the new IV //ONLY WORKS FOR SEPARATE DEVICES
-    		encryptedMessage = encryptedMessage.substring(16, encryptedMessage.length()); // Removes IV string from message
+    	if (!encryptedMessage.substring(0, 12).equals("[Voice-Call]")) { // an encrypted message is always longer than 12 chars
+    		encryptedMessage = decrypt(encryptedMessage);
+    		ivstr = encryptedMessage.substring(0, 16); // the first 16 chars are the next IV
+    		setIV(ivstr);
+    		encryptedMessage = encryptedMessage.substring(16, encryptedMessage.length());
 
-    		// First we check if the "[Part]FINISHED" command was sent
-        	// If true, this means remote has finished sending messages in chunks and we are ready to return the assembled message
-    		if (encryptedMessage.length() > 13) { // At least 14 chars, out of bounds check needed
+    		if (encryptedMessage.length() > 13) {
 	    		if (encryptedMessage.substring(0, 14).equals("[Part]FINISHED")) {
 	    			return mesAssembler();
 	    		}
-	    		else if (encryptedMessage.substring(0, 6).equals("[Part]")) { // In case we receive a chunk with over 14 chars
+	    		else if (encryptedMessage.substring(0, 6).equals("[Part]")) {
 	    			return chunkStorer(encryptedMessage);
 	    		}
     		}
-    		// Chunks of a composite message start with the "[Part]" tag, followed by their two-digit number
-	    	else if (encryptedMessage.length() > 6) { // At least 7 chars, out of bounds check needed
+	    	else if (encryptedMessage.length() > 6) {
 	    		if (encryptedMessage.substring(0, 6).equals("[Part]")) {
 	    			return chunkStorer(encryptedMessage);
 	    		}
 	    	}
     	}
-    	return encryptedMessage; // Returns the decrypted message (or the unencrypted voice call command)
+    	return encryptedMessage;
     }
 
-    // This is called upon receiving the command "[Part]FINISHED" to assemble and return the composite message
+    // Joins the stored chunks in order and empties the buffer
     public String mesAssembler() {
-		StringBuilder finalMessage = new StringBuilder(); // We use StringBuilder class to append all parts to a single variable
+		StringBuilder finalMessage = new StringBuilder();
 
-		// It iterates through the whole buffer that contains the **decrypted** chunks
 		for (int j = 0; j < bufferedMes.length; j++) {
-			if (bufferedMes[j] == null) { // If it finds a null object, it means all parts have been appended, the rest should be empty
+			if (bufferedMes[j] == null) { // chunks are numbered from 0, so the first empty slot is the end
 				break;
 			}
-			finalMessage.append(bufferedMes[j]); // Appends each chunk to the variable
-			bufferedMes[j] = null; // Gradually flushes the array per object to be used again in the future
+			finalMessage.append(bufferedMes[j]);
+			bufferedMes[j] = null;
 		}
-		return finalMessage.toString(); // Returns the composite message to be printed on the chat
+		return finalMessage.toString();
     }
 
-    // This is called upon receiving a chunk of a composite message and stores the (already decrypted) chunk in the local buffer
+    // Stores a decrypted chunk ("[Part]" + two-digit number + text) in the slot given by its number
     public String chunkStorer(String encryptedMessage) throws Exception {
-    	int i = Integer.parseInt(encryptedMessage.substring(6, 8));	// Extract the numbering of the part (Format: [Part]00)
-    	bufferedMes[i] = encryptedMessage.substring(8, encryptedMessage.length()); // Removes the "[Part]00" tag and stores the chunk
-		return ("Recieving long message, wait..."); // We ask the user to wait as the system collects each chunk
+    	int i = Integer.parseInt(encryptedMessage.substring(6, 8));
+    	bufferedMes[i] = encryptedMessage.substring(8, encryptedMessage.length());
+		return ("Recieving long message, wait...");
     }
 }

@@ -21,199 +21,137 @@ import java.lang.Thread;
 
 public class App extends Frame implements WindowListener, ActionListener {
 
-	/*
-	 * Definition of the app's fields
-	 */
-	static TextField inputTextField;		
-	static JTextArea textArea;				 
-	static JFrame frame;					
-	static JButton sendButton;			
-	static JTextField meesageTextField;		  
-	public static Color gray;				
-	final static String newline="\n";		
-	static JButton callButton;		
-	
-	static JButton passButton;	//button to change AES key
-	static JButton clearButton;	//button to clear chat
-	
-	// define network variables 
-	private InetAddress remoteAddress; // define IP address remoteAddress, to set it as IP of remote 
-	private UDPChat chatUDP; // define UDPChat object for UDP Chat 
-	private VoIP voip; // define VoIP object for VoIP 
-	private boolean isCallActive = false; // VoIP call not happening
+	static TextField inputTextField;
+	static JTextArea textArea;
+	static JFrame frame;
+	static JButton sendButton;
+	static JTextField meesageTextField;
+	public static Color gray;
+	final static String newline="\n";
+	static JButton callButton;
+	static JButton passButton;
+	static JButton clearButton;
 
-	// A note for tcp
-	// If you plan to use it:
-	// 1) uncomment the appropriate object
-	// 2) uncomment the appropriate constructor
-	// 3) uncomment the TCP receive()
-	// 4) comment the UDP SEND area
-	// 5) uncomment the TCP SEND area
-	
-//	private TCPChatClient chatTCP; // define TCPChat object for TCP Chat, if local is the "client"
-//	private TCPChatServer chatTCP; // define TCPChat object for TCP Chat, if local is the "server"
-	
-	// define AES variable	(AES + *ci*pher -> AESci)
+	private InetAddress remoteAddress;
+	private UDPChat chatUDP;
+	private VoIP voip;
+	private boolean isCallActive = false;
+
+	// To use the TCP chat instead of the UDP one:
+	// 1) uncomment the chatTCP field and its constructor (TCPChatClient on one peer, TCPChatServer on the other)
+	// 2) uncomment the TCP receive() in main
+	// 3) comment out the UDP SEND area and uncomment the TCP SEND area
+//	private TCPChatClient chatTCP;
+//	private TCPChatServer chatTCP;
+
 	public AESci aesci;
-	
-	{ // initialize network variables using non-static initialization block
-	
+
+	{
 	try {
-		remoteAddress = InetAddress.getByName("localhost"); // initialize remoteAddress, IP of remote
-		chatUDP = new UDPChat(new DatagramSocket(1234), remoteAddress); /* initialize chatUDP,
-		pass DatagramSocket from port 1234 and remoteAddress to constructor UDPChat */
-		voip = new VoIP(new DatagramSocket(1243), remoteAddress); /* initialize voip,
-		pass DatagramSocket from port 1243 and remoteAddress to constructor VoIP */
-		
-		// initialize chatTCP, pass Socket from port 2345 and IP of remote to constructor TCPChatSender 
-//		chatTCP = new TCPChatClient(new Socket(remoteAddress, 2345)); 
-		// initialize chatTCP, pass ServerSocket from port 2345 to constructor TCPChatReceiver 
+		remoteAddress = InetAddress.getByName("localhost"); // IP address of the other peer
+		chatUDP = new UDPChat(new DatagramSocket(1234), remoteAddress);
+		voip = new VoIP(new DatagramSocket(1243), remoteAddress);
+//		chatTCP = new TCPChatClient(new Socket(remoteAddress, 2345));
 //		chatTCP = new TCPChatServer(new ServerSocket(2345));
 	}
-	catch (Exception e) { // in case of error
+	catch (Exception e) {
 		e.printStackTrace();
 		System.exit(1);
 	}
-	
-	// initialize AES variable
+
 	try {
 		aesci = new AESci();
 	}
-	catch (Exception e) { // in case of error
+	catch (Exception e) {
 		e.printStackTrace();
 		System.exit(1);
 	}
-	
-	
 	}
 
-	/**
-	 * Construct the app's frame and initialize important parameters
-	 */
 	public App(String title) {
-		
-		/*
-		 * 1. Defining the components of the GUI
-		 */
-		
-		// Setting up the characteristics of the frame
-		super(title);								
-		gray = new Color(254, 254, 254);		
+		super(title);
+		gray = new Color(254, 254, 254);
 		setBackground(gray);
-		setLayout(new FlowLayout());			
-		addWindowListener(this);	
-		
-		// Setting up the TextField and the TextArea
+		setLayout(new FlowLayout());
+		addWindowListener(this);
+
 		inputTextField = new TextField();
 		inputTextField.setColumns(20);
-		
-		// Setting up the TextArea.
-		textArea = new JTextArea(10,40);			
-		textArea.setLineWrap(true);				
-		textArea.setEditable(false);			
+
+		textArea = new JTextArea(10,40);
+		textArea.setLineWrap(true);
+		textArea.setEditable(false);
 		JScrollPane scrollPane = new JScrollPane(textArea);
 		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		
-		//Setting up the buttons
-		sendButton = new JButton("Send");			
+
+		sendButton = new JButton("Send");
 		callButton = new JButton("Call");
 		passButton = new JButton("Set Pass");
 		clearButton = new JButton("Clear Chat");
-		/*
-		 * 2. Adding the components to the GUI
-		 */
-		add(scrollPane);							
+
+		add(scrollPane);
 		add(inputTextField);
 		add(sendButton);
 		add(callButton);
 		add(passButton);
 		add(clearButton);
-		
-		/*
-		 * 3. Linking the buttons to the ActionListener
-		 */
-		sendButton.addActionListener(this);			
-		callButton.addActionListener(this);	
+
+		sendButton.addActionListener(this);
+		callButton.addActionListener(this);
 		passButton.addActionListener(this);
 		clearButton.addActionListener(this);
 	}
-	
-	/**
-	 * The main method of the application. It continuously listens for
-	 * new messages.
-	 * @throws LineUnavailableException  
-	 */
-	public static void main(String[] args) throws LineUnavailableException {
-		
-		/*
-		 * 1. Create the app's window
-		 */
-		App app = new App("CN2 - AUTH");
-		app.setSize(500,250);				  
-		app.setVisible(true);			  
 
-		/*
-		 * 2. Start receiving Chat messages
-		 */
-		app.chatUDP.receive(textArea, app.aesci);  // call method receive from chatUDP, receive text data
-		
-		// TCP isn't encrypted
-		// Keep it commented if TCP isn't used
-//		app.chatTCP.receive(textArea); // call method receive from TCPChatSender or TCPChatRceiver, receive text data
+	public static void main(String[] args) throws LineUnavailableException {
+		App app = new App("CN2 - AUTH");
+		app.setSize(500,250);
+		app.setVisible(true);
+
+		app.chatUDP.receive(textArea, app.aesci);
+//		app.chatTCP.receive(textArea); // TCP messages are not encrypted
 	}
-	
-	/**
-	 * The method that corresponds to the Action Listener. Whenever an action is performed
-	 * (i.e., one of the buttons is clicked) this method is executed. 
-	 */
+
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		
-		/*
-		 * Check which button was clicked.
-		 */
-		
-		if (e.getSource() == sendButton){ // The "Send" button was clicked
-			
-			String messageToSend  = inputTextField.getText(); // get string messageToSend from TextField inputTextField 
-		// All of this if should be commented out if we plan to use TCP (TCP uses ~64Kb max buffer, we don't need chunks)
-			//UDP SEND [START]
-				if (!messageToSend.isEmpty()) { // if there is a messageToSend 
-					try {
-						String plainMessage = messageToSend; //stores the message in plaintext temporarily
-						
-						if (messageToSend.length() < 501) {	// if message is under 500 chars it leaves as a single packet
-							messageToSend = aesci.encryptMessage(messageToSend,1); //encrypts the message to be send
-							chatUDP.send(messageToSend); // call method send from chatUDP, send text data
-						}
-						else if (messageToSend.length() < 50001) {	// texts over 500 chars will be split and sent in chunks
-							int chunkSize = 500; // Sets the maximum chunk size
-							int j = 0; // Chunk counter
-							// Iterate over the string in chunks of a specified size
-							for (int i = 0; i < messageToSend.length(); i += chunkSize) {
-								int endIndex = Math.min(i + chunkSize, messageToSend.length()); // end index of the current chunk
 
-							    // Encrypt the chunk with a two-digit "[Part]00" tag in front of it
-							    // Note: for each encryption, it does NOT generate a new IV, hence the ", 0"
+		if (e.getSource() == sendButton){
+
+			String messageToSend  = inputTextField.getText();
+			//UDP SEND [START]
+				if (!messageToSend.isEmpty()) {
+					try {
+						String plainMessage = messageToSend;
+
+						if (messageToSend.length() < 501) { // up to 500 chars: a single packet
+							messageToSend = aesci.encryptMessage(messageToSend,1);
+							chatUDP.send(messageToSend);
+						}
+						else if (messageToSend.length() < 50001) { // longer messages are sent in chunks of 500 chars
+							int chunkSize = 500;
+							int j = 0;
+							for (int i = 0; i < messageToSend.length(); i += chunkSize) {
+								int endIndex = Math.min(i + chunkSize, messageToSend.length());
+
+							    // Each chunk starts with a two-digit "[Part]00" tag, so the receiver can put them back in order.
+							    // All chunks keep the same IV (", 0"), so chunks that arrive out of order can still be decrypted.
 							    String number = (j < 10 ? "0" : "") + j;
 							    String part = aesci.encryptMessage("[Part]" + number + messageToSend.substring(i, endIndex), 0);
-							    chatUDP.send(part); // sends the chunk
-							    j++; // Adds +1 to the chunk counter
+							    chatUDP.send(part);
+							    j++;
 								}
-							Thread.sleep(700); // Waits 700ms for all the packets to be sent before sending the next command
-							
-							// Sends the command to the remote confirming that local finished sending chunks
-							// Forces the remote to combine the received chunks and print them on their screen
-							chatUDP.send(aesci.encryptMessage("[Part]FINISHED", 1) ); 
+							Thread.sleep(700); // give the chunks time to arrive before the FINISHED command
+
+							// Tells the remote that all chunks were sent, so it can assemble the message
+							chatUDP.send(aesci.encryptMessage("[Part]FINISHED", 1) );
 						}
-						else if (messageToSend.length() > 50000) {	// edge case where user sends >50k char message
+						else if (messageToSend.length() > 50000) {
 							textArea.append("Message to big. Please send 50000 chars max.\nYour message was not send.");
 						}
-	
-						textArea.append("local: " + plainMessage  + newline); // appear plainMessage to textArea and change line
-						inputTextField.setText(""); // erase messageTosend from inputTextField					
+
+						textArea.append("local: " + plainMessage  + newline);
+						inputTextField.setText("");
 					}
-					catch (Exception ex) { // in case of error
+					catch (Exception ex) {
 						ex.printStackTrace();
 					}
 				}
@@ -222,84 +160,82 @@ public class App extends Frame implements WindowListener, ActionListener {
 			//TCP SEND [START]
 //				try {
 //					String plainMessage = messageToSend;
-//				// Checks needed for TCP, this whole if should be commented if we plan to use UDP
-//				// TCP can send ~64Kb packets easily, a lot bigger than what we normally need for this app
-//					if (!messageToSend.isEmpty() || (messageToSend.length() > 50000) ) { // if there is a messageToSend 
-//							chatTCP.send(messageToSend); // call method send from chatTCP, send text data
+//					if (!messageToSend.isEmpty() || (messageToSend.length() > 50000) ) {
+//							chatTCP.send(messageToSend);
 //					}
 //					else {
 //						textArea.append("Message to big. Please send 50000 chars max.\nYour message was not send.");
 //					}
-//				textArea.append("local: " + plainMessage  + newline); // appear plainMessage to textArea and change line
-//				inputTextField.setText(""); // erase messageTosend from inputTextField					
+//				textArea.append("local: " + plainMessage  + newline);
+//				inputTextField.setText("");
 //				}
-//				catch (Exception ex) { // in case of error
+//				catch (Exception ex) {
 //					ex.printStackTrace();
-//				} 
+//				}
 			//TCP SEND [END]
 		}
-		
-		else if (e.getSource() == callButton){ // The "Call" button was clicked
-			
-			// the [Voice-Call] tag is recognised by the UDPChat.receive method
-			String textAreaText = textArea.getText(); // get the text from textArea
-			if (!isCallActive) { // VoIP call happening 
-				if (textAreaText.contains("remote: [Voice-Call] Calling...Pick up!")) { // if remote starts call
+
+		else if (e.getSource() == callButton){
+
+			// Call commands start with "[Voice-Call]" and are sent unencrypted
+			String textAreaText = textArea.getText();
+			if (!isCallActive) {
+				if (textAreaText.contains("remote: [Voice-Call] Calling...Pick up!")) { // the remote is calling: answer
 					try {
-						String message = ("[Voice-Call] VoIP call started."); // inform remote local has picked up, call started
-						chatUDP.send(message); // by sending message
-					} 
-					catch (Exception ex) { // in case of error
+						String message = ("[Voice-Call] VoIP call started.");
+						chatUDP.send(message);
+					}
+					catch (Exception ex) {
 						ex.printStackTrace();
 					}
-					String content = textArea.getText(); // get the text from textArea
-					content = content.replace("remote: [Voice-Call] Calling...Pick up!","[Voice-Call] VoIP call started."); // replace the specific text
-					textArea.setText(content); 
-				}
-				else { // if local starts call
-					try {
-						String message = ("[Voice-Call] Calling...Pick up!"); // inform remote local is calling
-					    chatUDP.send(message); // by sending message
-					} 
-					catch (Exception ex) { // in case of error
-						ex.printStackTrace();
-					}
-					textArea.append("[Voice-Call] Calling..." + newline); // appear "Calling..." to textArea and change line
-				}
-				callButton.setText("End Call"); // change button to End Call
-				voip.start(); // call method start from VoIP and start VoIP call
-				isCallActive = true; // change state when "End Call" is pressed 
-			} 
-			
-			else { // VoIP call not happening
-				if (textAreaText.contains("remote: [Voice-Call] VoIP call ended.")) { // if remote ended call
-					String content = textArea.getText(); // get the text from textArea
-					content = content.replace("remote: [Voice-Call] VoIP call ended.", "[Voice-Call] VoIP call ended."); // replace the specific text
+					String content = textArea.getText();
+					content = content.replace("remote: [Voice-Call] Calling...Pick up!","[Voice-Call] VoIP call started.");
 					textArea.setText(content);
-				} 
-				else { // if local ended call
+				}
+				else { // start a call
 					try {
-						String message = ("[Voice-Call] VoIP call ended."); // inform remote local has stopped the call
-						chatUDP.send(message); // by sending message
-					} 
-					catch (Exception ex) { // in case of error
+						String message = ("[Voice-Call] Calling...Pick up!");
+					    chatUDP.send(message);
+					}
+					catch (Exception ex) {
 						ex.printStackTrace();
 					}
-					textArea.append("[Voice-Call] VoIP call ended."+ newline); // appear "VoIP call ended." to textArea and change line
+					textArea.append("[Voice-Call] Calling..." + newline);
 				}
-				callButton.setText("Call"); // change button to Call
-				voip.stop(); // call method stop from VoIP and stop VoIP call
-				isCallActive = false; // change state when "Call" is pressed
-				
-				String twoContent = textArea.getText(); // get the text from textArea
-				twoContent = twoContent.replace("[Voice-Call] Calling...", ""); // remove the specific text
-				textArea.setText(twoContent);							
+				callButton.setText("End Call");
+				voip.start();
+				isCallActive = true;
 			}
-		}	
-		
-		else if (e.getSource() == passButton){	// if user wants to change password-AES key (both should have the same)
+
+			else {
+				if (textAreaText.contains("remote: [Voice-Call] VoIP call ended.")) { // the remote already ended the call
+					String content = textArea.getText();
+					content = content.replace("remote: [Voice-Call] VoIP call ended.", "[Voice-Call] VoIP call ended.");
+					textArea.setText(content);
+				}
+				else { // end the call and tell the remote
+					try {
+						String message = ("[Voice-Call] VoIP call ended.");
+						chatUDP.send(message);
+					}
+					catch (Exception ex) {
+						ex.printStackTrace();
+					}
+					textArea.append("[Voice-Call] VoIP call ended."+ newline);
+				}
+				callButton.setText("Call");
+				voip.stop();
+				isCallActive = false;
+
+				String twoContent = textArea.getText();
+				twoContent = twoContent.replace("[Voice-Call] Calling...", "");
+				textArea.setText(twoContent);
+			}
+		}
+
+		else if (e.getSource() == passButton){ // both peers must set the same password
 			String pass  = inputTextField.getText();
-			if (!pass.isEmpty() && !(pass.length() < 6)) {	// checks if password is empty or under 6 chars
+			if (!pass.isEmpty() && !(pass.length() < 6)) {
 				try {
 					aesci.initFromPassword(pass);
 				} catch (NoSuchAlgorithmException | InvalidKeySpecException e1) {
@@ -311,39 +247,32 @@ public class App extends Frame implements WindowListener, ActionListener {
 				textArea.append("Please put a password (over 5 chars) in the input Field before pressing the button" + newline);
 			}
 		}
-		
-		else if (e.getSource() == clearButton){ // Clears the chat area
+
+		else if (e.getSource() == clearButton){
 			textArea.setText("Text Cleared :)" + newline);
 			inputTextField.setText("");
 		}
 	}
 
-	/**
-	 * These methods have to do with the GUI. You can use them if you wish to define
-	 * what the program should do in specific scenarios (e.g., when closing the 
-	 * window).
-	 */
 	@Override
 	public void windowActivated(WindowEvent e) {
-		// TODO Auto-generated method stub	
 	}
 
 	@Override
 	public void windowClosed(WindowEvent e) {
-		// TODO Auto-generated method stub	
 	}
 
 	@Override
-	public void windowClosing(WindowEvent e) { // close the app
+	public void windowClosing(WindowEvent e) {
 //		try {
 //	        if (chatTCP != null) {
-//	        	chatTCP.closeEverything(); // close streams
+//	        	chatTCP.closeEverything();
 //	        }
 //	    }
-//		catch (Exception ex) { // in case of error
+//		catch (Exception ex) {
 //	        ex.printStackTrace();
-//	    } 
-//		finally { // always executed
+//	    }
+//		finally {
 	        dispose();
 	        System.exit(0);
 //	    }
@@ -351,27 +280,17 @@ public class App extends Frame implements WindowListener, ActionListener {
 
 	@Override
 	public void windowDeactivated(WindowEvent e) {
-		// TODO Auto-generated method stub	
 	}
 
 	@Override
 	public void windowDeiconified(WindowEvent e) {
-		// TODO Auto-generated method stub	
 	}
 
 	@Override
 	public void windowIconified(WindowEvent e) {
-		// TODO Auto-generated method stub	
 	}
 
 	@Override
 	public void windowOpened(WindowEvent e) {
-		// TODO Auto-generated method stub	
 	}
-	
-	
 }
-
-
-
-

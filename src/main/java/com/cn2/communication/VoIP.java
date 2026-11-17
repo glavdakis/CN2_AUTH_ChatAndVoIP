@@ -1,75 +1,68 @@
-package com.cn2.communication; 
+package com.cn2.communication;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import javax.sound.sampled.LineUnavailableException;
 
-public class VoIP { // class for VoIP 
-	
-    private AudioPlayback playback; // define object for playing sound  
-    private AudioRecord record; // define object for recording sound  
-    private InetAddress remoteAddress; // define IP address remoteAddress, to set it as IP of remote 
-    private DatagramSocket datagramSocket; // define DatagramSocket datagramSocket 
-    private volatile boolean isCallActive = false; // VoIP call state
+public class VoIP { // voice calls over UDP, port 1243
+
+    private AudioPlayback playback;
+    private AudioRecord record;
+    private InetAddress remoteAddress;
+    private DatagramSocket datagramSocket;
+    private volatile boolean isCallActive = false; // read by both audio threads
+
     public VoIP(DatagramSocket datagramSocket, InetAddress remoteAddress) throws LineUnavailableException {
-    // conctructor VoIP, initialize datagramSocket and remoteAddress  
-        
         this.playback = new AudioPlayback();
         this.record = new AudioRecord();
         this.remoteAddress  = remoteAddress;
         this.datagramSocket = datagramSocket;
     }
-    
-    public void start() { // method start, start VoIP call 
-    	
-    	isCallActive = true; // set isCallActive to true, change state when "End Call" is pressed
+
+    // Sending and receiving run on two separate threads, so both directions work at the same time
+    public void start() {
+    	isCallActive = true;
 		try {
-			record.open(); // call method open from AudioRecord, open targetLine-stream and start recording audio
-			playback.open(); // call method open from AudioPlayback, open sourceLine-stream and start playing audio
+			record.open();
+			playback.open();
 
-			new Thread(() -> { // Thread the capture and send audio process
+			new Thread(() -> { // capture and send
 				try {
-					byte[] sendAudioBuffer = new byte[1024]; // sendAudioBuffer, size=1024 bytes, to capture audio stream from microphone
-					while (isCallActive) { // while VoIP call is happening
-						sendAudioBuffer = record.read(); // sendAudioBuffer captures audio and returns byte stream 
-						DatagramPacket datagramPacket = new DatagramPacket(sendAudioBuffer, sendAudioBuffer.length, remoteAddress, 1243); /* construct datagramPacket, 
-						send packets of length of sendAudioBuffer, to IP remoteAddress and port=1243 of remote */  
-						datagramSocket.send(datagramPacket); // datagramPacket send 
+					byte[] sendAudioBuffer = new byte[1024];
+					while (isCallActive) {
+						sendAudioBuffer = record.read();
+						DatagramPacket datagramPacket = new DatagramPacket(sendAudioBuffer, sendAudioBuffer.length, remoteAddress, 1243);
+						datagramSocket.send(datagramPacket);
 					}
-				} 
-				catch (Exception e) { // in case of error
+				}
+				catch (Exception e) {
 					e.printStackTrace();
 				}
-			}).start(); // start Thread
-			
+			}).start();
 
-			new Thread(() -> { // Thread the receive and play audio process
+			new Thread(() -> { // receive and play
 				try {
-					byte[] receiveAudioBuffer = new byte[1024]; // receiveAudioBuffer, size=1024 bytes, to capture byte stream from remote 
-					while (isCallActive) { // while VoIP call is happening
-						DatagramPacket datagramPacket = new DatagramPacket(receiveAudioBuffer, receiveAudioBuffer.length); /* construct datagramPacket,
-						receive packets of length of receiveAudioBuffer */  
-						datagramSocket.receive(datagramPacket); // datagramPacket received from datagramSocket, blocking method 
-						playback.write(datagramPacket.getData()); // call method write from AudioPlayback, write audio data from datagramPacket to sourceLine    
+					byte[] receiveAudioBuffer = new byte[1024];
+					while (isCallActive) {
+						DatagramPacket datagramPacket = new DatagramPacket(receiveAudioBuffer, receiveAudioBuffer.length);
+						datagramSocket.receive(datagramPacket);
+						playback.write(datagramPacket.getData());
 					}
-				} 
-				catch (Exception e) { // in case of error
+				}
+				catch (Exception e) {
 					e.printStackTrace();
 				}
-			}).start(); // start Thread
-
-		} 
-		catch (Exception e) { // in case of error
+			}).start();
+		}
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void stop() { // method stop, stop VoIP call 
-		
-		isCallActive = false; // set isCallActive to false, change state when "Call" is pressed
-		record.close();  // call method close from AudioRecord, close targetLine-stream 
-		playback.close();  // call method close from AudioPlayback, close sourceLine-stream 
+	public void stop() {
+		isCallActive = false;
+		record.close();
+		playback.close();
 	}
-    
 }
