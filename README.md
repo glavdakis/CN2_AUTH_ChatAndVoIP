@@ -1,6 +1,6 @@
 # P2P Chat and VoIP Application
 
-A two-peer desktop application for text chat and voice calls, written in Java with plain UDP and TCP sockets. Text messages are encrypted with AES-GCM.
+A two-peer desktop application for text chat and voice calls, written in Java with plain UDP and TCP sockets.
 
 Team project for the **Computer Networks II** course at ECE AUTH during the 2024–2025 academic year.
 
@@ -8,12 +8,20 @@ Team project for the **Computer Networks II** course at ECE AUTH during the 2024
   <img src="docs/app.png" alt="Chat window" width="480">
 </p>
 
+## Branches
+
+| Branch | What it contains |
+|---|---|
+| [`master`](../../tree/master) | The full version described in the report: chat, voice calls and AES-GCM encryption of text messages. |
+| [`no-encryption`](../../tree/no-encryption) | The same chat and voice calls without encryption. Simpler, and more robust (see [Known limitations](#known-limitations)). |
+
 ## Features
 
-- **Text chat over UDP:** each peer sends and receives datagrams on port 1234. Messages of up to 50,000 characters are split into 500-character chunks and reassembled by the receiver.
+- **Text chat over UDP:** each peer sends and receives datagrams on port 1234.
 - **Voice calls over UDP:** audio is captured at 8 kHz, 8-bit, mono and streamed in 1024-byte datagrams on port 1243. Capture and playback run on separate threads, so chat and voice work at the same time.
 - **Text chat over TCP:** an alternative client/server version of the chat on port 2345.
-- **Encryption:** UDP text messages are encrypted with AES-GCM. Both peers derive the same 128-bit key from a shared password (PBKDF2 with HMAC-SHA256), set with the *Set Pass* button.
+- **Encryption** (`master` only): UDP text messages are encrypted with AES-GCM. Both peers derive the same 128-bit key from a shared password (PBKDF2 with HMAC-SHA256), set with the *Set Pass* button.
+- **Long messages** (`master` only): messages of up to 50,000 characters are split into 500-character chunks and reassembled by the receiver.
 
 Only the Java standard library is used (`java.net`, `javax.sound`, `javax.crypto`, Swing).
 
@@ -37,10 +45,20 @@ Requirements: Java 8 or later and Maven.
    ```
 
    You can also import the project into an IDE as a Maven project and run `App.java`.
-3. Type the same password (at least 6 characters) on both sides and press *Set Pass*.
+3. On `master`: type the same password (at least 6 characters) on both sides and press *Set Pass*.
 4. Press *Send* to send a message, or *Call* to start and stop a voice call.
 
 The firewall must allow UDP traffic on ports 1234 and 1243. To use the TCP chat, enable the `TCPChatServer` and `TCPChatClient` lines in `App.java` on the two peers.
+
+## Known limitations
+
+The encryption on `master` is a proof of concept. After every message the sender switches to a new IV and sends it inside that message, so both peers must receive every message, in order. Because UDP does not guarantee delivery:
+
+- If a single chat packet is lost, every later message fails to decrypt.
+- If both peers press *Send* at the same moment, both messages fail, and so does the rest of the conversation.
+- The encrypted version cannot be tested with one instance on a single machine (`localhost`), because the app decrypts its own message with the IV it has already moved past.
+
+Restarting both applications puts them back in sync. The chunks of a long message also share one IV, which AES-GCM is not meant to allow. The `no-encryption` branch has none of these issues.
 
 ## Project structure
 
@@ -53,7 +71,7 @@ src/main/java/com/cn2/communication/
   VoIP.java            voice streaming over UDP
   AudioRecord.java     microphone capture
   AudioPlayback.java   speaker playback
-  AESci.java           AES-GCM encryption
+  AESci.java           AES-GCM encryption (master only)
 ```
 
 ## Team
