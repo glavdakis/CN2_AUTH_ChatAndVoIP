@@ -31,7 +31,7 @@ The exchanged packets were captured and analyzed in Wireshark: UDP and TCP text 
 
 ![UDP chat packets in Wireshark](report/images/udp-chat/udpchat_6.png)
 
-The full analysis is in the report (in Greek): [`report/Documentation-Report.pdf`](report/Documentation-Report.pdf). It describes the code on `master`.
+The full analysis is in the report: [`report/Documentation-Report.pdf`](report/Documentation-Report.pdf). It describes the code on `master`.
 
 ## Running it
 
