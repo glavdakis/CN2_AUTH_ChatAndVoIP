@@ -74,7 +74,7 @@ src/main/java/com/cn2/communication/
   AudioPlayback.java   speaker playback
   AESci.java           AES-GCM encryption (master only)
 report/
-  Documentation-Report.pdf   the report (in Greek)
+  Documentation-Report.pdf   the report
   images/                    screenshots used in the report and this README
     gui/                     the application window
     udp-chat/                Wireshark captures of the UDP chat
